@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f9f9f9; }
+      h2 { color: #333; border-bottom: 2px solid #4CAF50; padding-bottom: 10px; }
+      .list-group { list-style: none; padding: 0; background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; }
+      .list-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; align-items: center; cursor: pointer; transition: 0.2s; }
+      .list-item:hover { background-color: #f0f0f0; }
+      .list-item:last-child { border-bottom: none; }
+      .icon { margin-right: 15px; font-size: 1.2em; }
+      a { text-decoration: none; color: #333; flex-grow: 1; display: block; }
+      .folder-name { font-weight: bold; color: #2196F3; }
+      .btn-back { background: #666; color: white; padding: 5px 15px; border-radius: 4px; border: none; cursor: pointer; margin-bottom: 15px; }
+    </style>
+  </head>
+  <body>
+    
+    <div id="app">
+      <button id="backBtn" class="btn-back" style="display:none;" onclick="loadFolder(currentParentId)">⬅ 返回上一層</button>
+      <h2 id="folderTitle">載入中...</h2>
+      <ul id="fileList" class="list-group"></ul>
+    </div>
+
+    <script>
+      var currentParentId = null;
+
+      // 初始化：載入根目錄
+      window.onload = function() {
+        loadFolder(); 
+      };
+
+      function loadFolder(folderId) {
+        document.getElementById('fileList').innerHTML = '<li class="list-item">載入資料中...</li>';
+        google.script.run.withSuccessHandler(renderList).getContent(folderId);
+      }
+
+      function renderList(data) {
+        var listHtml = '';
+        var title = document.getElementById('folderTitle');
+        var backBtn = document.getElementById('backBtn');
+        
+        // 更新標題與狀態
+        title.innerText = data.currentName;
+        currentParentId = data.parentId;
+        
+        // 控制返回按鈕顯示
+        if (data.parentId && data.parentId !== '你的_GOOGLE_DRIVE_資料夾_ID') { // 可選：防止返回到根目錄以上
+           backBtn.style.display = 'inline-block';
+        } else {
+           // 視需求決定是否隱藏根目錄的返回鍵
+           backBtn.style.display = (data.parentId) ? 'inline-block' : 'none';
+        }
+
+        // 渲染列表
+        if (data.items.length === 0) {
+          listHtml = '<li class="list-item">此資料夾為空</li>';
+        } else {
+          data.items.forEach(function(item) {
+            if (item.type === 'folder') {
+              // 點擊資料夾：呼叫後端讀取下一層
+              listHtml += `<li class="list-item" onclick="loadFolder('${item.id}')">
+                             <span class="icon">📁</span>
+                             <span class="folder-name">${item.name}</span>
+                           </li>`;
+            } else {
+              // 點擊檔案：直接打開連結
+              listHtml += `<li class="list-item">
+                             <span class="icon">${item.icon}</span>
+                             <a href="${item.url}" target="_blank">${item.name}</a>
+                           </li>`;
+            }
+          });
+        }
+        document.getElementById('fileList').innerHTML = listHtml;
+      }
+    </script>
+  </body>
+</html>
